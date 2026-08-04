@@ -2,8 +2,10 @@ import Link from "next/link";
 import { getDefaultCompanyId } from "@/lib/company";
 import { getSalesYearAnalytics } from "@/lib/server/sales-customer-analytics";
 
+export const dynamic = "force-dynamic";
+
 function fmtMoney(n: number) {
-  return `¥${n.toLocaleString("zh-CN", {
+  return `HK$ ${n.toLocaleString("zh-HK", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}`;
@@ -20,7 +22,8 @@ export default async function SalesAnalysisPage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">銷售分析報告 (Sales Analysis)</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            基於報價單、合同、預收發票（不含已取消），{year} 日曆年彙總。
+            業績口徑對齊銷售合同（已確認／已完成）；月度與產品排行均來自合同明細。{data.year}{" "}
+            年（香港日曆）。
           </p>
         </div>
         <Link
@@ -33,34 +36,37 @@ export default async function SalesAnalysisPage() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="text-sm font-medium text-zinc-500">本年銷售單據總額</h3>
-          <p className="mt-2 text-3xl font-bold tracking-tight">{fmtMoney(data.totalDocAmount)}</p>
-          <p className="mt-1 text-xs text-zinc-500">{data.docCount} 筆單據</p>
+          <h3 className="text-sm font-medium text-zinc-500">本年合同成交額</h3>
+          <p className="mt-2 text-3xl font-bold tracking-tight">{fmtMoney(data.contractWon)}</p>
+          <p className="mt-1 text-xs text-zinc-500">{data.docCount} 份已確認／已完成合同</p>
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="text-sm font-medium text-zinc-500">合同成交額</h3>
+          <h3 className="text-sm font-medium text-zinc-500">平均合同客單價</h3>
           <p className="mt-2 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-            {fmtMoney(data.contractWon)}
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">已確認 / 已完成合同</p>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="text-sm font-medium text-zinc-500">平均客單價</h3>
-          <p className="mt-2 text-3xl font-bold tracking-tight">
             {data.docCount > 0 ? fmtMoney(data.avgTicket) : "—"}
           </p>
-          <p className="mt-1 text-xs text-zinc-500">總額 ÷ 單據筆數</p>
+          <p className="mt-1 text-xs text-zinc-500">成交額 ÷ 合同筆數</p>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <h3 className="text-sm font-medium text-zinc-500">在途報價（未轉合同）</h3>
+          <p className="mt-2 text-3xl font-bold tracking-tight">{fmtMoney(data.pipelineQuoteAmount)}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {data.pipelineQuoteCount} 張；不計入上方成交額
+            {data.orphanPiCount > 0
+              ? `｜獨立預收 ${data.orphanPiCount} 張 ${fmtMoney(data.orphanPiAmount)}`
+              : ""}
+          </p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-          <h3 className="text-sm font-semibold mb-1">月度單據金額</h3>
-          <p className="mb-4 text-xs text-zinc-500">柱長為當年內相對最高月份的占比</p>
+          <h3 className="text-sm font-semibold mb-1">月度合同成交</h3>
+          <p className="mb-4 text-xs text-zinc-500">依合同日期（香港月份）；柱長為當年內最高月占比</p>
           <div className="space-y-4">
             {data.monthly.every((x) => x.revenue === 0) ? (
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {year} 年暫無有效銷售單據，請在報價/合同模塊建立資料。
+                {data.year} 年暫無已確認／已完成合同，請在「銷售合同」建立或確認資料。
               </p>
             ) : (
               data.monthly.map((item) => (
@@ -83,7 +89,7 @@ export default async function SalesAnalysisPage() {
 
         <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
           <h3 className="text-sm font-semibold mb-1">產品金額排行 (Top 5)</h3>
-          <p className="mb-4 text-xs text-zinc-500">按明細行「小計」彙總，數量為銷售件數</p>
+          <p className="mb-4 text-xs text-zinc-500">來自合同明細小計（與合同模組一致）</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="border-b border-zinc-200 dark:border-zinc-800 text-zinc-500">
@@ -97,7 +103,7 @@ export default async function SalesAnalysisPage() {
                 {data.topProducts.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                      本年暫無帶明細的銷售單據。
+                      本年暫無合同明細。
                     </td>
                   </tr>
                 ) : (
@@ -116,6 +122,21 @@ export default async function SalesAnalysisPage() {
           </div>
         </section>
       </div>
+
+      <p className="text-xs text-zinc-500">
+        相關模組：
+        <Link href="/sales/contracts" className="mx-1 text-blue-600 hover:underline">
+          銷售合同
+        </Link>
+        ·
+        <Link href="/sales/quotes" className="mx-1 text-blue-600 hover:underline">
+          報價單
+        </Link>
+        ·
+        <Link href="/sales/finance-commission" className="mx-1 text-blue-600 hover:underline">
+          財務與佣金
+        </Link>
+      </p>
     </div>
   );
 }

@@ -37,13 +37,15 @@ export async function loginAction(formData: FormData): Promise<void> {
   const permissions = user.roles.flatMap((ur) =>
     ur.role.permissions.map((rp) => `${rp.permission.action}:${rp.permission.resource}`)
   );
+  const roleNames = Array.from(new Set(user.roles.map((ur) => ur.role.name).filter(Boolean)));
 
   const token = await new SignJWT({
     sub: user.id,
     email: user.email,
     name: user.name,
     permissions: Array.from(new Set(permissions)),
-    isSuperAdmin: false,
+    roles: roleNames,
+    isSuperAdmin: user.isSuperAdmin === true,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")

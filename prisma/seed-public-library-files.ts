@@ -1,4 +1,4 @@
-import { copyFile, mkdir, unlink, writeFile } from "node:fs/promises";
+﻿import { copyFile, mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
@@ -186,7 +186,7 @@ export async function seedPublicLibraryDocuments(
       mime: "text/plain; charset=utf-8",
       body: Buffer.from(
           "供應商服務：冷庫溫度記錄（季度訂閱）\n" +
-            "內部請款參考標題含「請款種子」之演示資料；實際付款以審批單為準。\n",
+            "內部請款參考標題含「請款種子」；實際付款以審批單為準。\n",
           "utf-8",
         ),
     },
@@ -266,7 +266,7 @@ export async function seedPublicLibraryDocuments(
       baseName: "客戶跟進_港島堅果行_拜訪紀要_202606.txt",
       mime: "text/plain; charset=utf-8",
       body: Buffer.from(
-          "客戶：港島堅果行（演示客戶群組之一）\n" +
+          "客戶：港島堅果行（客戶群組之一）\n" +
             "議題：Q2 價格、冷鏈配送、帶殼夏威夷果大宗交期。\n" +
             "下一步：發送更新報價與合規證照掃描件。\n",
           "utf-8",
@@ -378,18 +378,18 @@ function shuffleInPlace<T>(arr: T[]): void {
 }
 
 /**
- * 演示用：將當前公司一部分公共檔隨機複製到指定用戶的個人網盤（帶 copiedFromPublicFileId，公共列表可顯示「已在個人網盤」）。
+ * 將當前公司一部分公共檔隨機複製到指定用戶的個人網盤（帶 copiedFromPublicFileId，公共列表可顯示「已在個人網盤」）。
  * 每次執行會先刪除該用戶此前所有「從公共庫複製」的個人檔（含磁碟），再重新隨機抽取。
  */
-export async function seedDemoPersonalCopiesFromPublicLibrary(
+export async function seedPersonalCopiesFromPublicLibrary(
   prisma: PrismaClient,
   companyId: string,
-  demoUserId: string,
+  userId: string,
 ): Promise<void> {
   const prev = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT "id" FROM "FileDocument"
     WHERE "companyId" = ${companyId}
-      AND "ownerId" = ${demoUserId}
+      AND "ownerId" = ${userId}
       AND "copiedFromPublicFileId" IS NOT NULL
   `;
   for (const p of prev) {
@@ -402,7 +402,7 @@ export async function seedDemoPersonalCopiesFromPublicLibrary(
   await prisma.$executeRaw`
     DELETE FROM "FileDocument"
     WHERE "companyId" = ${companyId}
-      AND "ownerId" = ${demoUserId}
+      AND "ownerId" = ${userId}
       AND "copiedFromPublicFileId" IS NOT NULL
   `;
 
@@ -443,7 +443,7 @@ export async function seedDemoPersonalCopiesFromPublicLibrary(
           ${src.size},
           ${`${companyId}/${newId}`},
           ${src.mimeType},
-          ${demoUserId},
+          ${userId},
           false,
           ${src.id},
           CURRENT_TIMESTAMP,

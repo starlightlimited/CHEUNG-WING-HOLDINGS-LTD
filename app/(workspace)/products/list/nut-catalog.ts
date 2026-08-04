@@ -76,7 +76,7 @@ export type NutCatalogRow = {
   description: string;
   price: number;
   cost: number;
-  /** 主檔建立時間（演示：2026-03～06 分批維護） */
+  /** 主檔建立時間（2026-03～06 分批維護） */
   createdAtIso: string;
   attributes: Prisma.InputJsonValue;
   attachments: Prisma.InputJsonValue;
@@ -133,7 +133,7 @@ export const NUT_CATALOG: NutCatalogRow[] = [
     createdAtIso: "2026-03-19T14:05:00+08:00",
     attachments: [
       { type: "image", url: "/files/public/pistachio-lot-202604.png" },
-      { type: "video", url: "/files/public/opening-demo-PROD-002.mp4" },
+      { type: "video", url: "/files/public/opening-PROD-002.mp4" },
     ],
     attributes: {
       category: "堅果炒貨",

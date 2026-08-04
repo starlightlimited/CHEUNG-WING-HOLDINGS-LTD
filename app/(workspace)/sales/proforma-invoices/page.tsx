@@ -24,7 +24,13 @@ export default function ProformaInvoicesPage() {
       const res = await fetch(`/api/sales-documents?type=PROFORMA_INVOICE`);
       if (res.ok) {
         const data = await res.json();
-        setDocuments(data);
+        setDocuments(
+          [...data].sort(
+            (a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime() ||
+              String(b.documentNo).localeCompare(String(a.documentNo)),
+          ),
+        );
       }
     } catch (error) {
       console.error("獲取預收發票失敗:", error);
@@ -43,7 +49,7 @@ export default function ProformaInvoicesPage() {
       if (res.ok) {
         const data = await res.json();
         const { exportDocumentToPDF } = await import("@/lib/utils/pdf-export");
-        exportDocumentToPDF(data, "Proforma Invoice");
+        await exportDocumentToPDF(data, "Proforma Invoice");
       }
     } catch (error) {
       console.error("導出 PDF 失敗:", error);

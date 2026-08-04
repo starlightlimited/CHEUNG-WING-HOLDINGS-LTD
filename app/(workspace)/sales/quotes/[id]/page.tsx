@@ -61,7 +61,7 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
   const handleExportPDF = async () => {
     try {
       const { exportDocumentToPDF } = await import("@/lib/utils/pdf-export");
-      exportDocumentToPDF(document, "Quotation");
+      await exportDocumentToPDF(document, "Quotation");
     } catch (error) {
       console.error("導出 PDF 失敗:", error);
       alert("導出失敗");
@@ -89,7 +89,8 @@ export default function QuoteDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
         <div className="flex gap-2">
-          {document.status !== "CONFIRMED" && (
+          {!document.children?.some((c: { type: string }) => c.type === "CONTRACT") &&
+            document.status !== "CONFIRMED" && (
             <Button
               variant="outline"
               onClick={handleConvert}

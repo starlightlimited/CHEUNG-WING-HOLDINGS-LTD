@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -40,7 +40,7 @@ async function main() {
     return;
   }
 
-  const code = arg || process.env.CLEAR_COMPANY_CODE || "DEMO";
+  const code = arg || process.env.CLEAR_COMPANY_CODE || "CW";
   const company = await prisma.company.findUnique({
     where: { code },
     select: { id: true, name: true },

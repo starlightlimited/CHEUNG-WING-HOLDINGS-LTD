@@ -66,7 +66,7 @@ export async function loadContractPrepayData(companyId: string): Promise<{
     }),
     prisma.prepayment.findMany({
       where: { companyId },
-      orderBy: { receivedAt: "asc" },
+      orderBy: { receivedAt: "desc" },
       select: {
         id: true,
         amount: true,

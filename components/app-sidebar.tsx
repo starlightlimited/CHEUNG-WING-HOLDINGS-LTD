@@ -14,7 +14,14 @@ function sectionOpenDefault(pathname: string) {
   return init;
 }
 
-export function AppSidebar() {
+export function AppSidebar({
+  roleLabel,
+  userName,
+}: {
+  /** 目前登入角色，如 Admin、Staff、Admin / Staff */
+  roleLabel: string;
+  userName?: string | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState<Record<string, boolean>>(() => sectionOpenDefault(pathname));
 
@@ -74,6 +81,16 @@ export function AppSidebar() {
         })}
       </nav>
       <div className="border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="mb-2 px-1">
+          {userName ? (
+            <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100" title={userName}>
+              {userName}
+            </p>
+          ) : null}
+          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400" title={roleLabel}>
+            登入角色：{roleLabel}
+          </p>
+        </div>
         <form action={logoutAction}>
           <button
             type="submit"

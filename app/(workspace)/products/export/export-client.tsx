@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { registerCjkFont } from "@/lib/utils/pdf-export";
 
 type Product = {
   id: string;
@@ -190,7 +191,7 @@ export function ExportClient({ products: initialProducts }: { products: Product[
   };
 
   // Export to PDF
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     const data = getSelectedData();
     if (data.length === 0) {
       alert("沒有可導出的數據");
@@ -198,6 +199,7 @@ export function ExportClient({ products: initialProducts }: { products: Product[
     }
 
     const doc = new jsPDF("landscape");
+    const font = await registerCjkFont(doc);
     
     // Add title
     doc.setFontSize(16);
@@ -225,7 +227,7 @@ export function ExportClient({ products: initialProducts }: { products: Product[
       body: tableData,
       theme: "grid",
       styles: {
-        font: "helvetica", // Fallback font, CJK characters might not render properly without a custom font
+        font,
         fontSize: 7,
         cellPadding: 2,
       },
@@ -237,6 +239,7 @@ export function ExportClient({ products: initialProducts }: { products: Product[
       headStyles: {
         fillColor: [41, 41, 41],
         textColor: 255,
+        font,
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245],

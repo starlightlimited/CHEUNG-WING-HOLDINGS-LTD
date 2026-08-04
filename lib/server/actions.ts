@@ -6,6 +6,21 @@ import { prisma } from "@/lib/prisma";
 import { getDefaultCompanyId } from "@/lib/company";
 import { nextJournalEntryNo } from "@/lib/finance/journal-entry-no";
 import { syncPaidPaymentRequestToJournal } from "@/lib/finance/sync-payment-request-journal";
+import {
+  PREPAYMENT_REVENUE_CUTOFF,
+  recognizePrepaymentAsRevenue,
+  syncPayableToJournal,
+  syncPrepaymentToJournal,
+  syncReceivableToJournal,
+} from "@/lib/finance/sync-business-journals";
+
+function revalidateAccountingPaths() {
+  revalidatePath("/accounting/journals");
+  revalidatePath("/accounting/reports/pl");
+  revalidatePath("/accounting/reports/bs");
+  revalidatePath("/accounting/reports/trial-balance");
+  revalidatePath("/accounting/ledger");
+}
 
 export async function deleteProduct(id: string): Promise<void> {
   const companyId = await getDefaultCompanyId();
@@ -558,13 +573,14 @@ export async function createJournalEntry(formData: FormData): Promise<void> {
   if (!td.eq(tc)) return;
 
   const entryNo = await nextJournalEntryNo(companyId);
+  // 正式帳：新建憑證直接過帳，立即進入總帳明細
   await prisma.journalEntry.create({
     data: {
       companyId,
       entryNo,
       entryDate,
       description,
-      status: "DRAFT",
+      status: "POSTED",
       lines: {
         create: lines.map((l) => ({
           glAccountId: l.glAccountId,
@@ -576,7 +592,7 @@ export async function createJournalEntry(formData: FormData): Promise<void> {
       },
     },
   });
-  revalidatePath("/accounting/journals");
+  revalidateAccountingPaths();
   revalidatePath("/dashboard");
 }
 
@@ -599,11 +615,7 @@ export async function postJournalEntry(id: string): Promise<void> {
     where: { id },
     data: { status: "POSTED" },
   });
-  revalidatePath("/accounting/journals");
-  revalidatePath("/accounting/reports/pl");
-  revalidatePath("/accounting/reports/bs");
-  revalidatePath("/accounting/reports/trial-balance");
-  revalidatePath("/accounting/ledger");
+  revalidateAccountingPaths();
   revalidatePath("/dashboard");
 }
 
@@ -660,6 +672,8 @@ export async function upsertBudgetLine(formData: FormData): Promise<void> {
     update: { amount, note },
   });
   revalidatePath("/financial/budget");
+  revalidatePath("/financial/analysis-reports");
+  revalidatePath("/accounting/reports/pl");
   revalidatePath("/dashboard");
 }
 
@@ -716,13 +730,7 @@ export async function setPaymentRequestStatus(
 
   if (status === "PAID") {
     const sync = await syncPaidPaymentRequestToJournal(prisma, companyId, id);
-    if (sync.ok && sync.created) {
-      revalidatePath("/accounting/journals");
-      revalidatePath("/accounting/reports/pl");
-      revalidatePath("/accounting/reports/bs");
-      revalidatePath("/accounting/reports/trial-balance");
-      revalidatePath("/accounting/ledger");
-    }
+    if (sync.ok && sync.created) revalidateAccountingPaths();
   }
 
   revalidatePath("/financial/payment-requests");
@@ -750,8 +758,16 @@ export async function createPrepayment(formData: FormData): Promise<void> {
   const linkedDocumentType = String(formData.get("linkedDocumentType") ?? "").trim() || null;
   const linkedDocumentId = String(formData.get("linkedDocumentId") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
+  const receivedRaw = String(formData.get("receivedAt") ?? "").trim();
+  let receivedAt = new Date();
+  if (receivedRaw) {
+    const [y, m, d] = receivedRaw.split("-").map((x) => Number.parseInt(x, 10));
+    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+      receivedAt = new Date(y, m - 1, d);
+    }
+  }
   if (amount.lte(0)) return;
-  await prisma.prepayment.create({
+  const created = await prisma.prepayment.create({
     data: {
       companyId,
       amount,
@@ -761,8 +777,19 @@ export async function createPrepayment(formData: FormData): Promise<void> {
       linkedDocumentType,
       linkedDocumentId,
       note,
+      receivedAt,
     },
   });
+
+  // 7 月中前收款，或已對接合同：直接視為已收並轉收入進損益表
+  const shouldRecognize =
+    created.receivedAt < PREPAYMENT_REVENUE_CUTOFF || Boolean(linkedDocumentId);
+  if (shouldRecognize) {
+    await recognizePrepaymentAsRevenue(prisma, companyId, created.id);
+  } else {
+    await syncPrepaymentToJournal(prisma, companyId, created.id);
+  }
+  revalidateAccountingPaths();
   revalidatePath("/financial/prepayments");
   revalidatePath("/financial/contract-invoice-prepay");
   revalidatePath("/accounting/ar");
@@ -779,7 +806,7 @@ export async function createReceivable(formData: FormData): Promise<void> {
   const dueRaw = String(formData.get("dueDate") ?? "").trim();
   const dueDate = dueRaw ? new Date(dueRaw) : null;
   if (!customerName || amount.lte(0)) return;
-  await prisma.accountsReceivable.create({
+  const created = await prisma.accountsReceivable.create({
     data: {
       companyId,
       customerName,
@@ -791,6 +818,8 @@ export async function createReceivable(formData: FormData): Promise<void> {
       status: "OPEN",
     },
   });
+  const sync = await syncReceivableToJournal(prisma, companyId, created.id);
+  if (sync.ok && sync.created) revalidateAccountingPaths();
   revalidatePath("/accounting/ar");
   revalidatePath("/financial/prepayments");
   revalidatePath("/financial/contract-invoice-prepay");
@@ -807,7 +836,7 @@ export async function createPayable(formData: FormData): Promise<void> {
   const dueRaw = String(formData.get("dueDate") ?? "").trim();
   const dueDate = dueRaw ? new Date(dueRaw) : null;
   if (!vendorName || amount.lte(0)) return;
-  await prisma.accountsPayable.create({
+  const created = await prisma.accountsPayable.create({
     data: {
       companyId,
       vendorName,
@@ -819,6 +848,8 @@ export async function createPayable(formData: FormData): Promise<void> {
       status: "OPEN",
     },
   });
+  const sync = await syncPayableToJournal(prisma, companyId, created.id);
+  if (sync.ok && sync.created) revalidateAccountingPaths();
   revalidatePath("/accounting/ap");
   revalidatePath("/dashboard");
 }

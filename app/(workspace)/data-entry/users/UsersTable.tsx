@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { displayUserName } from "@/lib/user-display-name";
 import UserEditDialog from "./UserEditDialog";
 
 type Company = { id: string; name: string; code: string };
@@ -100,7 +101,7 @@ export default function UsersTable({
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-b border-zinc-100 dark:border-zinc-800">
-                <td className="px-4 py-3 font-medium">{user.name || "—"}</td>
+                <td className="px-4 py-3 font-medium">{displayUserName(user.name) || "—"}</td>
                 <td className="px-4 py-3 font-mono text-zinc-600 dark:text-zinc-400">{user.email}</td>
                 <td className="px-4 py-3">
                   {user.isSuperAdmin ? (
@@ -113,15 +114,18 @@ export default function UsersTable({
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex max-w-md flex-wrap gap-1">
-                    {user.roles.map((ur) => (
-                      <span
-                        key={`${ur.companyId}-${ur.role.id}`}
-                        className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        title={ur.company.name}
-                      >
-                        {ur.company.code}·{ur.role.name}
-                      </span>
-                    ))}
+                    {user.roles.map((ur) => {
+                      const multiCompany = companies.length > 1;
+                      return (
+                        <span
+                          key={`${ur.companyId}-${ur.role.id}`}
+                          className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                          title={ur.company.name}
+                        >
+                          {multiCompany ? `${ur.company.name} · ${ur.role.name}` : ur.role.name}
+                        </span>
+                      );
+                    })}
                     {user.roles.length === 0 && <span className="text-zinc-400">無公司角色</span>}
                   </div>
                 </td>
@@ -182,7 +186,7 @@ export default function UsersTable({
           <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
             <h3 className="text-lg font-semibold">確認刪除</h3>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              確定刪除用戶「{deleteTarget.name || deleteTarget.email}」？其所有公司下的角色關聯將一併刪除，且不可復原。
+              確定刪除用戶「{displayUserName(deleteTarget.name) || deleteTarget.email}」？其所有公司下的角色關聯將一併刪除，且不可復原。
             </p>
             <div className="mt-6 flex justify-end gap-2">
               <button

@@ -29,7 +29,7 @@
 - [技術規格書 (Tech Spec)](./docs/tech.md) - 架構設計、數據庫 Schema 與 API 規範
 - [開發階段拆解 (Development Phase)](./docs/development_phase.md) - 項目開發計劃與任務拆解
 
-## 🚀 快速體驗 (Demo)
+## 🚀 快速開始
 
-- **登錄賬號 (Email)**: `demo@tvp.local`
-- **登錄密碼 (Password)**: `demo123`
+- **登錄賬號 (Email)**: `admin@tvp.local`
+- **登錄密碼 (Password)**: `admin123`

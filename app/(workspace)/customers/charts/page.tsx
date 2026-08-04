@@ -41,12 +41,12 @@ export default async function CustomerChartsPage() {
   const statusData = Object.entries(statusCount).map(([name, value]) => ({ name, value }));
   const groupData = Object.entries(groupCount).map(([name, value]) => ({ name, value }));
   
-  // Sort month data chronologically
+  // 按月份由新到舊
   const trendData = Object.entries(monthCount)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => b.localeCompare(a))
     .map(([month, count]) => ({ month, count }));
 
-  // If no data, provide some mock data for demonstration purposes
+  // 尚無客戶資料時的佔位圖表
   const hasData = customers.length > 0;
 
   const finalSourceData = hasData ? sourceData : [
@@ -70,12 +70,12 @@ export default async function CustomerChartsPage() {
   ];
 
   const finalTrendData = hasData ? trendData : [
-    { month: "2023-08", count: 12 },
-    { month: "2023-09", count: 18 },
-    { month: "2023-10", count: 25 },
-    { month: "2023-11", count: 22 },
-    { month: "2023-12", count: 30 },
     { month: "2024-01", count: 45 },
+    { month: "2023-12", count: 30 },
+    { month: "2023-11", count: 22 },
+    { month: "2023-10", count: 25 },
+    { month: "2023-09", count: 18 },
+    { month: "2023-08", count: 12 },
   ];
 
   return (

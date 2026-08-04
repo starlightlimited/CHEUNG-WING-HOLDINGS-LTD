@@ -61,22 +61,27 @@ function statusLabelZh(status: string) {
 export function InvoiceExportClient({ initialInvoices }: { initialInvoices: InvoiceExportRow[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("2026-03-01");
-  const [dateTo, setDateTo] = useState("2026-06-30");
+  const [dateTo, setDateTo] = useState("2026-08-04");
   const [isExporting, setIsExporting] = useState(false);
 
   const filteredInvoices = useMemo(() => {
     const from = dateFrom ? dateFrom : "0000-01-01";
     const to = dateTo ? dateTo : "9999-12-31";
     const q = searchTerm.trim().toLowerCase();
-    return initialInvoices.filter((inv) => {
-      const inRange = inv.date >= from && inv.date <= to;
-      if (!inRange) return false;
-      if (!q) return true;
-      return (
-        inv.customerName.toLowerCase().includes(q) ||
-        inv.documentNo.toLowerCase().includes(q)
+    return initialInvoices
+      .filter((inv) => {
+        const inRange = inv.date >= from && inv.date <= to;
+        if (!inRange) return false;
+        if (!q) return true;
+        return (
+          inv.customerName.toLowerCase().includes(q) ||
+          inv.documentNo.toLowerCase().includes(q)
+        );
+      })
+      .sort(
+        (a, b) =>
+          b.date.localeCompare(a.date) || b.documentNo.localeCompare(a.documentNo),
       );
-    });
   }, [initialInvoices, searchTerm, dateFrom, dateTo]);
 
   const handleExport = () => {
@@ -95,7 +100,7 @@ export function InvoiceExportClient({ initialInvoices }: { initialInvoices: Invo
         <div>
           <h1 className="text-2xl font-bold tracking-tight">發票導出</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            列表資料來自銷售模塊「預收發票」主檔（2026 年 3–6 月演示數據已寫入種子）；可篩選後匯出。
+            列表資料來自銷售模塊「預收發票」主檔；可篩選後匯出。
           </p>
         </div>
         <Button onClick={handleExport} disabled={isExporting || filteredInvoices.length === 0} className="gap-2 shrink-0">
@@ -174,7 +179,7 @@ export function InvoiceExportClient({ initialInvoices }: { initialInvoices: Invo
                   <TableRow>
                     <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       {initialInvoices.length === 0
-                        ? "暫無預收發票；請執行 npx prisma db seed 載入演示數據。"
+                        ? "暫無預收發票；可在銷售模塊新增，或執行 npx prisma db seed 載入種子資料。"
                         : "沒有符合篩選條件的發票記錄"}
                     </TableCell>
                   </TableRow>

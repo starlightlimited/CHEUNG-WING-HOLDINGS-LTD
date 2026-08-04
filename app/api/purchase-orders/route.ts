@@ -20,7 +20,7 @@ export async function GET(request: Request) {
           }
         }
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ date: "desc" }, { poNumber: "desc" }, { createdAt: "desc" }],
     });
 
     return NextResponse.json(purchaseOrders);

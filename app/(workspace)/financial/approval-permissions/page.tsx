@@ -1,12 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getDefaultCompanyId } from "@/lib/company";
+import { STAFF_ENGLISH_NAMES } from "@/lib/staff-display-names";
 
-const APPROVAL_LOG_OPERATORS = [
-  "TAI CHUK NI戴祝妮",
-  "WONG OI CHUN黃爱真",
-  "WONG OI YEE 黃愛義",
-  "WONG YUEN YING黃婉英",
-] as const;
+const APPROVAL_LOG_OPERATORS = STAFF_ENGLISH_NAMES;
 
 function randomApprovalOperator() {
   const i = Math.floor(Math.random() * APPROVAL_LOG_OPERATORS.length);
@@ -115,7 +111,7 @@ export default async function ApprovalPermissionsPage() {
             </div>
             
             <div className="mt-8 p-4 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800 w-full">
-              <div className="text-sm font-medium mb-2">審批人操作演示：</div>
+              <div className="text-sm font-medium mb-2">審批人操作說明：</div>
               <div className="flex gap-2">
                 <button className="flex-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400">
                   准予報銷

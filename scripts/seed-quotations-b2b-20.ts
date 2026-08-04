@@ -1,5 +1,5 @@
-/**
- * 在 DEMO 公司寫入 20 筆 B2B 風格報價單（客戶為 seed 中的 CUST-SEED-101～120），
+﻿/**
+ * 在 預設公司寫入 20 筆 B2B 風格報價單（客戶為 seed 中的 CUST-SEED-101～120），
  * 單號以 QT-B2B-2026- 開頭；備註為常見採購／通路場景，非隨機測試字串。
  * 可重複執行：先刪除同前綴報價單及明細再建立。
  *
@@ -229,15 +229,15 @@ function sumLines(lines: Line[]): Prisma.Decimal {
 }
 
 async function main() {
-  const demo = await prisma.company.findFirst({ where: { code: "DEMO" } });
-  if (!demo) {
-    console.error("找不到 code=DEMO 的公司，請先執行 npm run db:seed");
+  const companyRow = await prisma.company.findFirst({ where: { code: "CW" } });
+  if (!companyRow) {
+    console.error("找不到 code=CW 的公司，請先執行 npm run db:seed");
     process.exit(1);
   }
 
   const customerCodes = [...new Set(QUOTES.map((q) => q.customerCode))];
   const customers = await prisma.customer.findMany({
-    where: { companyId: demo.id, code: { in: customerCodes } },
+    where: { companyId: companyRow.id, code: { in: customerCodes } },
     select: { id: true, code: true, name: true },
   });
   const byCode = new Map(customers.map((c) => [c.code, c]));
@@ -252,7 +252,7 @@ async function main() {
   const skuToId: Record<string, string> = {};
   for (const sku of skus) {
     const p = await prisma.product.findUnique({
-      where: { companyId_sku: { companyId: demo.id, sku } },
+      where: { companyId_sku: { companyId: companyRow.id, sku } },
       select: { id: true },
     });
     if (!p) {
@@ -266,7 +266,7 @@ async function main() {
     async (tx) => {
       const existing = await tx.salesDocument.findMany({
         where: {
-          companyId: demo.id,
+          companyId: companyRow.id,
           type: "QUOTATION",
           documentNo: { startsWith: DOC_PREFIX },
         },
@@ -284,7 +284,7 @@ async function main() {
 
         await tx.salesDocument.create({
           data: {
-            companyId: demo.id,
+            companyId: companyRow.id,
             type: "QUOTATION",
             documentNo,
             customerId: customer.id,
@@ -311,7 +311,7 @@ async function main() {
   );
 
   console.log(
-    `已在 DEMO 寫入 ${QUOTES.length} 筆 B2B 報價單（單號 ${DOC_PREFIX}01～20），客戶 CUST-SEED-101～120。`,
+    `已在預設公司 寫入 ${QUOTES.length} 筆 B2B 報價單（單號 ${DOC_PREFIX}01～20），客戶 CUST-SEED-101～120。`,
   );
 }
 

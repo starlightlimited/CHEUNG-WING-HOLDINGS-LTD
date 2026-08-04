@@ -237,7 +237,7 @@ export function PaymentRequestExportClient({
                   <TableRow>
                     <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                       {initialRows.length === 0
-                        ? "暫無請款記錄；可在「請款單管理」新增或執行 prisma seed 載入演示數據。"
+                        ? "暫無請款記錄；可在「請款單管理」新增或執行 prisma seed 載入種子資料。"
                         : "沒有符合篩選條件的記錄"}
                     </TableCell>
                   </TableRow>

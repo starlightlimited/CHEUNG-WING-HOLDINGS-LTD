@@ -1,4 +1,4 @@
-import {
+﻿import {
   Prisma,
   PrismaClient,
   GlAccountType,
@@ -10,34 +10,56 @@ import bcrypt from "bcryptjs";
 import { syncNutCatalog } from "../app/(workspace)/products/list/nut-catalog";
 import { ensureQ2NutPurchaseOrders } from "../app/(workspace)/data-entry/purchase-orders/purchase-orders-q2-seed";
 import {
-  seedDemoPersonalCopiesFromPublicLibrary,
+  seedPersonalCopiesFromPublicLibrary,
   seedPublicLibraryDocuments,
 } from "./seed-public-library-files";
 import { seedDocumentCases } from "./seed-document-cases";
+import {
+  DEFAULT_ADMIN_EMAIL,
+  DEFAULT_ADMIN_NAME,
+  DEFAULT_ADMIN_PASSWORD,
+  DEFAULT_COMPANY_CODE,
+  LEGACY_ADMIN_EMAIL,
+  LEGACY_COMPANY_CODES,
+} from "../lib/company-constants";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  /** 發票 202500062 — 賣方（本系統 DEMO 公司即開票主體） */
+  /** 發票 202500062 — 賣方（本系統預設公司即開票主體） */
   const sellerAddress =
     "RM 1813, 18/F., LUEN CHEONG CAN CENTRE, NO.8 YIP WONG ROAD, TUEN MUN, N.T., HONG KONG.（香港屯門業旺路8號聯昌中心18樓1813室）\n傳真: (852) 2819-8363";
 
-  const company = await prisma.company.upsert({
-    where: { code: "DEMO" },
-    create: {
-      name: "祥榮控股有限公司 (CHEUNG WING HOLDINGS LTD.)",
-      code: "DEMO",
-      address: sellerAddress,
-      phone: "(852) 2819-0303",
-      email: "info@cheungwing.hk",
-    },
-    update: {
-      name: "祥榮控股有限公司 (CHEUNG WING HOLDINGS LTD.)",
-      address: sellerAddress,
-      phone: "(852) 2819-0303",
-      email: "info@cheungwing.hk",
-    },
-  });
+  const companyProfile = {
+    name: "祥榮控股有限公司 (CHEUNG WING HOLDINGS LTD.)",
+    address: sellerAddress,
+    phone: "(852) 2819-0303",
+    email: "info@cheungwing.hk",
+  };
+
+  let company = await prisma.company.findFirst({ where: { code: DEFAULT_COMPANY_CODE } });
+  if (!company) {
+    for (const legacyCode of LEGACY_COMPANY_CODES) {
+      const legacy = await prisma.company.findFirst({ where: { code: legacyCode } });
+      if (legacy) {
+        company = await prisma.company.update({
+          where: { id: legacy.id },
+          data: { code: DEFAULT_COMPANY_CODE, ...companyProfile },
+        });
+        break;
+      }
+    }
+  }
+  if (!company) {
+    company = await prisma.company.create({
+      data: { code: DEFAULT_COMPANY_CODE, ...companyProfile },
+    });
+  } else {
+    company = await prisma.company.update({
+      where: { id: company.id },
+      data: companyProfile,
+    });
+  }
 
   const catDefs = [
     { code: "GEN", name: "一般", description: "一般業務" },
@@ -83,7 +105,7 @@ async function main() {
   });
   if (!genCat) throw new Error("seed: category GEN missing");
 
-  /** 僅移除舊版「（演示）」憑證，不刪手動／請款來源之已過帳憑證 */
+  /** 清理歷史種子標記憑證（舊資料可能含此字樣），不刪手動／請款來源之已過帳憑證 */
   await prisma.journalEntry.deleteMany({
     where: {
       companyId: company.id,
@@ -91,7 +113,7 @@ async function main() {
     },
   });
 
-  /** 資產負債表負債欄演示：冪等重建（與手動憑證分開） */
+  /** 資產負債表負債欄種子：冪等重建（與手動憑證分開） */
   await prisma.journalEntry.deleteMany({
     where: { companyId: company.id, sourceType: "SEED_BS_LIABILITIES" },
   });
@@ -152,51 +174,64 @@ async function main() {
   ]);
 
   const y = new Date().getFullYear();
-  const m = new Date().getMonth();
-
-  await prisma.budgetLine.upsert({
-    where: {
-      companyId_year_month_glAccountId_budgetType: {
-        companyId: company.id,
-        year: y,
-        month: m + 1,
-        glAccountId: glByCode["4000"]!,
+  // 全年固定月預算（大致不變）；5000 僅 1 月（其餘月無成本實際會顯示 0%）
+  const FLAT_REVENUE = 40000;
+  const FLAT_OPEX = 50000;
+  const JAN_COGS = 140000;
+  for (let month = 1; month <= 12; month++) {
+    const specs: {
+      code: string;
+      budgetType: BudgetType;
+      amount: number;
+      note: string;
+    }[] = [
+      {
+        code: "4000",
         budgetType: BudgetType.REVENUE,
+        amount: FLAT_REVENUE,
+        note: "月度收入預算（全年固定）",
       },
-    },
-    create: {
-      companyId: company.id,
-      year: y,
-      month: m + 1,
-      glAccountId: glByCode["4000"]!,
-      amount: 60000,
-      budgetType: BudgetType.REVENUE,
-      note: "月度收入預算",
-    },
-    update: { amount: 60000 },
-  });
-
-  await prisma.budgetLine.upsert({
-    where: {
-      companyId_year_month_glAccountId_budgetType: {
-        companyId: company.id,
-        year: y,
-        month: m + 1,
-        glAccountId: glByCode["5100"]!,
+      {
+        code: "5100",
         budgetType: BudgetType.EXPENSE,
+        amount: FLAT_OPEX,
+        note: "月度管理費用預算（全年固定）",
       },
-    },
-    create: {
-      companyId: company.id,
-      year: y,
-      month: m + 1,
-      glAccountId: glByCode["5100"]!,
-      amount: 10000,
-      budgetType: BudgetType.EXPENSE,
-      note: "月度費用預算",
-    },
-    update: { amount: 10000 },
-  });
+    ];
+    if (month === 1) {
+      specs.push({
+        code: "5000",
+        budgetType: BudgetType.EXPENSE,
+        amount: JAN_COGS,
+        note: "營業成本預算（1月進貨暫估）",
+      });
+    }
+    for (const s of specs) {
+      const glId = glByCode[s.code];
+      if (!glId) continue;
+      await prisma.budgetLine.upsert({
+        where: {
+          companyId_year_month_glAccountId_budgetType: {
+            companyId: company.id,
+            year: y,
+            month,
+            glAccountId: glId,
+            budgetType: s.budgetType,
+          },
+        },
+        create: {
+          companyId: company.id,
+          year: y,
+          month,
+          glAccountId: glId,
+          amount: s.amount,
+          budgetType: s.budgetType,
+          note: s.note,
+        },
+        update: { amount: s.amount, note: s.note },
+      });
+    }
+  }
 
   await prisma.paymentRequest.deleteMany({
     where: {
@@ -205,6 +240,7 @@ async function main() {
         { title: "辦公用品採購請款（演示）" },
         { requestedBy: "演示用戶" },
         { requestedBy: "演示用户" },
+        { requestedBy: DEFAULT_ADMIN_NAME },
       ],
     },
   });
@@ -222,52 +258,58 @@ async function main() {
     department: string;
     category: string;
   };
-  const prSeeds: PrSeed[] = [
+  type PrSeedDated = PrSeed & { createdAt: string };
+  const prSeeds: PrSeedDated[] = [
     {
       title: `快遞與同城送貨（${prSeedMarker}）`,
-      amount: "1280",
+      amount: "980",
       purpose: "月結運費",
       status: "SUBMITTED",
       department: "行政部",
       category: "物流",
+      createdAt: "2026-07-20T09:00:00.000Z",
     },
     {
       title: `辦公軟體年度續費（${prSeedMarker}）`,
-      amount: "9600",
-      purpose: "協作與郵箱套件",
+      amount: "4200",
+      purpose: "協作與郵箱套件（小團隊）",
       status: "APPROVED",
       department: "財務部",
       category: "其他",
+      createdAt: "2026-05-15T10:00:00.000Z",
     },
     {
       title: `冷庫溫度記錄服務（${prSeedMarker}）`,
-      amount: "4200",
-      purpose: "季度訂閱",
+      amount: "1800",
+      purpose: "月度訂閱",
       status: "PAID",
       department: "品質與合規部",
       category: "其他",
+      createdAt: "2026-04-08T11:00:00.000Z",
     },
     {
       title: `展會交通與住宿（${prSeedMarker}）`,
-      amount: "5600",
+      amount: "2600",
       purpose: "實報實銷",
       status: "DRAFT",
       department: "市場部",
       category: "差旅",
+      createdAt: "2026-06-22T14:00:00.000Z",
     },
     {
       title: `臨時裝卸外包（${prSeedMarker}）`,
-      amount: "3100",
+      amount: "1500",
       purpose: "夜間到櫃",
       status: "REJECTED",
       department: "物流倉儲部",
       category: "物流",
+      createdAt: "2026-03-16T16:00:00.000Z",
     },
   ];
-  const now = new Date();
   for (const r of prSeeds) {
     const needApproval =
       r.status === "APPROVED" || r.status === "REJECTED" || r.status === "PAID";
+    const createdAt = new Date(r.createdAt);
     await prisma.paymentRequest.create({
       data: {
         companyId: company.id,
@@ -279,7 +321,8 @@ async function main() {
         category: r.category,
         approverRole: "finance_manager",
         approvedBy: needApproval ? "財務審批" : null,
-        approvedAt: needApproval ? now : null,
+        approvedAt: needApproval ? new Date(createdAt.getTime() + 5 * 3_600_000) : null,
+        createdAt,
       },
     });
   }
@@ -305,16 +348,34 @@ async function main() {
     },
   });
 
-  const passwordHash = bcrypt.hashSync("demo123", 10);
-  const demoUser = await prisma.user.upsert({
-    where: { email: "demo@tvp.local" },
-    create: {
-      email: "demo@tvp.local",
-      passwordHash,
-      name: "演示用戶",
-    },
-    update: { passwordHash, name: "演示用戶" },
-  });
+  const passwordHash = bcrypt.hashSync(DEFAULT_ADMIN_PASSWORD, 10);
+  let adminUser = await prisma.user.findUnique({ where: { email: DEFAULT_ADMIN_EMAIL } });
+  if (!adminUser) {
+    const legacyAdmin = await prisma.user.findUnique({ where: { email: LEGACY_ADMIN_EMAIL } });
+    if (legacyAdmin) {
+      adminUser = await prisma.user.update({
+        where: { id: legacyAdmin.id },
+        data: {
+          email: DEFAULT_ADMIN_EMAIL,
+          passwordHash,
+          name: DEFAULT_ADMIN_NAME,
+        },
+      });
+    } else {
+      adminUser = await prisma.user.create({
+        data: {
+          email: DEFAULT_ADMIN_EMAIL,
+          passwordHash,
+          name: DEFAULT_ADMIN_NAME,
+        },
+      });
+    }
+  } else {
+    adminUser = await prisma.user.update({
+      where: { id: adminUser.id },
+      data: { passwordHash, name: DEFAULT_ADMIN_NAME },
+    });
+  }
 
   // --- RBAC Seed ---
   const adminRole = await prisma.role.upsert({
@@ -422,19 +483,19 @@ async function main() {
   });
 
   await prisma.userRole.upsert({
-    where: { userId_roleId_companyId: { userId: demoUser.id, roleId: adminRole.id, companyId: company.id } },
-    create: { userId: demoUser.id, roleId: adminRole.id, companyId: company.id },
+    where: { userId_roleId_companyId: { userId: adminUser.id, roleId: adminRole.id, companyId: company.id } },
+    create: { userId: adminUser.id, roleId: adminRole.id, companyId: company.id },
     update: {},
   });
 
-  /** 公共庫演示上傳者（Staff + 可讀文件庫），密碼同 demo */
+  /** 公共庫上傳者（Staff + 可讀文件庫），密碼同管理員 */
   const publicLibColleagueDefs = [
-    { email: "chenyi@tvp.local", name: "陳一" },
-    { email: "linyi@tvp.local", name: "林二" },
-    { email: "wangsan@tvp.local", name: "王三" },
-    { email: "zhaowu@tvp.local", name: "趙五" },
+    { email: "chenyi@tvp.local", name: "Chen Yi" },
+    { email: "linyi@tvp.local", name: "Lin Yi" },
+    { email: "wangsan@tvp.local", name: "Wang San" },
+    { email: "zhaowu@tvp.local", name: "Zhao Wu" },
   ] as const;
-  const publicLibOwnerIds: string[] = [demoUser.id];
+  const publicLibOwnerIds: string[] = [adminUser.id];
   for (const c of publicLibColleagueDefs) {
     const u = await prisma.user.upsert({
       where: { email: c.email },
@@ -551,7 +612,7 @@ async function main() {
         unitCost: ev.unitCost != null ? new Prisma.Decimal(String(ev.unitCost)) : null,
         referenceType: ev.referenceType,
         referenceId: ev.referenceId ?? null,
-        createdBy: demoUser.id,
+        createdBy: adminUser.id,
         createdAt: new Date(ev.at),
       },
     });
@@ -639,7 +700,7 @@ async function main() {
     },
   });
 
-  /** 二十家風格接近真實商業檔案的客戶（公司名、聯絡人均為虛構，僅供演示檔案結構與列表效果） */
+  /** 二十家風格接近真實商業檔案的客戶（公司名、聯絡人均為虛構，供檔案結構與列表效果） */
   const realisticCustomers: Array<{
     code: string;
     name: string;
@@ -1209,7 +1270,7 @@ async function main() {
     });
   }
 
-  /** 演示用：將部分客戶劃入新增分組，讓「客戶分組」頁更像實際在用的結構 */
+  /** 將部分客戶劃入新增分組，讓「客戶分組」頁更像實際在用的結構 */
   await prisma.customer.updateMany({
     where: {
       companyId: company.id,
@@ -1246,14 +1307,14 @@ async function main() {
     create: {
       companyId: company.id,
       code: "CUST-001",
-      name: "演示科技有限公司",
+      name: "創科資訊有限公司",
       contactPerson: "張總",
       email: "zhang@example.com",
       phone: "13800138000",
       groupId: customerGroup.id,
       status: "ACTIVE",
     },
-    update: { name: "演示科技有限公司", contactPerson: "張總" },
+    update: { name: "創科資訊有限公司", contactPerson: "張總" },
   });
 
   const thuanAnInvoiceNotes = `# 發票信息提取 (Invoice Information Extraction)
@@ -1329,7 +1390,7 @@ async function main() {
       customerId: thuanCustomer.id,
       type: "EMAIL",
       content: `【發票 202500062 歸檔摘要】\n${thuanAnInvoiceNotes.slice(0, 4000)}`,
-      createdBy: demoUser.id,
+      createdBy: adminUser.id,
     },
   });
 
@@ -1508,7 +1569,7 @@ async function main() {
         type: tmpl.type,
         content: tmpl.text(who, co),
         date: slotIn2026H1(fuSalt * 17 + j * 23 + (c.code?.length ?? 0)),
-        createdBy: demoUser.id,
+        createdBy: adminUser.id,
       });
     }
     fuSalt++;
@@ -1585,7 +1646,7 @@ async function main() {
     "HK-NUT-019",
   ] as const) {
     if (!piCustId.has(code)) {
-      throw new Error(`seed PI demo: missing customer ${code} (香港堅果零售種子)`);
+      throw new Error(`seed PI: missing customer ${code} (香港堅果零售種子)`);
     }
   }
   const custSeed120 = await prisma.customer.findFirst({
@@ -1802,11 +1863,11 @@ async function main() {
     update: { currentSeq: 1 },
   });
 
-  /** 公共文件數據庫：2026/03–06，與演示公司／庫存／請款／報價敘述對齊 */
+  /** 公共文件數據庫：2026/03–06，與公司／庫存／請款／報價敘述對齊 */
   await seedPublicLibraryDocuments(prisma, company.id, publicLibOwnerIds);
 
-  /** 隨機將部分公共檔複製到演示賬號個人網盤（供公共庫頁展示「已在個人網盤」） */
-  await seedDemoPersonalCopiesFromPublicLibrary(prisma, company.id, demoUser.id);
+  /** 隨機將部分公共檔複製到管理員個人網盤（供公共庫頁展示「已在個人網盤」） */
+  await seedPersonalCopiesFromPublicLibrary(prisma, company.id, adminUser.id);
 
   /** 案件分類與管理：2026/03–06，與 QT／SEED-PO／預收／倉儲／導出敘述對齊 */
   await seedDocumentCases(prisma, company.id);

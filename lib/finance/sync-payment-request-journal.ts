@@ -1,6 +1,9 @@
 import type { PrismaClient } from "@prisma/client";
-import { JournalEntryStatus } from "@prisma/client";
-import { nextJournalEntryNo } from "@/lib/finance/journal-entry-no";
+import {
+  createPostedJournalFromSource,
+  findJournalBySource,
+  resolveActiveGlByCode,
+} from "@/lib/finance/create-posted-journal";
 
 export const JOURNAL_SOURCE_PAYMENT_REQUEST = "PAYMENT_REQUEST" as const;
 
@@ -20,13 +23,12 @@ export async function syncPaidPaymentRequestToJournal(
   companyId: string,
   paymentRequestId: string,
 ): Promise<SyncPaidPrJournalResult> {
-  const existing = await db.journalEntry.findFirst({
-    where: {
-      companyId,
-      sourceType: JOURNAL_SOURCE_PAYMENT_REQUEST,
-      sourceId: paymentRequestId,
-    },
-  });
+  const existing = await findJournalBySource(
+    db,
+    companyId,
+    JOURNAL_SOURCE_PAYMENT_REQUEST,
+    paymentRequestId,
+  );
   if (existing) return { ok: true, created: false, entryId: existing.id };
 
   const pr = await db.paymentRequest.findFirst({
@@ -36,8 +38,8 @@ export async function syncPaidPaymentRequestToJournal(
   if (pr.status !== "PAID") return { ok: false, reason: "not_paid" };
 
   const [expenseGl, bankGl, category] = await Promise.all([
-    db.glAccount.findFirst({ where: { companyId, code: EXPENSE_GL_CODE, isActive: true } }),
-    db.glAccount.findFirst({ where: { companyId, code: BANK_GL_CODE, isActive: true } }),
+    resolveActiveGlByCode(db, companyId, EXPENSE_GL_CODE),
+    resolveActiveGlByCode(db, companyId, BANK_GL_CODE),
     db.accountingCategory.findFirst({
       where: { companyId, code: { in: ["ADM", "GEN"] } },
       orderBy: { code: "asc" },
@@ -45,41 +47,32 @@ export async function syncPaidPaymentRequestToJournal(
   ]);
   if (!expenseGl || !bankGl) return { ok: false, reason: "missing_gl" };
 
-  const amount = pr.amount;
-  const entryNo = await nextJournalEntryNo(companyId);
-  const entryDate = pr.approvedAt ?? pr.createdAt;
   const descParts = [`請款已支付：${pr.title}`];
   if (pr.purpose) descParts.push(pr.purpose);
 
-  const entry = await db.journalEntry.create({
-    data: {
-      companyId,
-      entryNo,
-      entryDate,
-      description: descParts.join(" · ").slice(0, 500),
-      status: JournalEntryStatus.POSTED,
-      sourceType: JOURNAL_SOURCE_PAYMENT_REQUEST,
-      sourceId: pr.id,
-      lines: {
-        create: [
-          {
-            glAccountId: expenseGl.id,
-            debit: amount,
-            credit: 0,
-            memo: "請款費用",
-            accountingCategoryId: category?.id ?? null,
-          },
-          {
-            glAccountId: bankGl.id,
-            debit: 0,
-            credit: amount,
-            memo: "銀行付款",
-            accountingCategoryId: category?.id ?? null,
-          },
-        ],
+  const result = await createPostedJournalFromSource(db, {
+    companyId,
+    sourceType: JOURNAL_SOURCE_PAYMENT_REQUEST,
+    sourceId: pr.id,
+    entryDate: pr.approvedAt ?? pr.createdAt,
+    description: descParts.join(" · "),
+    lines: [
+      {
+        glAccountId: expenseGl.id,
+        debit: pr.amount,
+        credit: 0,
+        memo: "請款費用",
+        accountingCategoryId: category?.id ?? null,
       },
-    },
+      {
+        glAccountId: bankGl.id,
+        debit: 0,
+        credit: pr.amount,
+        memo: "銀行付款",
+        accountingCategoryId: category?.id ?? null,
+      },
+    ],
   });
 
-  return { ok: true, created: true, entryId: entry.id };
+  return { ok: true, ...result };
 }

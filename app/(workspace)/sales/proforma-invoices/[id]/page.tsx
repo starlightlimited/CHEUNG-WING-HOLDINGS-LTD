@@ -42,7 +42,7 @@ export default function ProformaInvoiceDetailPage({ params }: { params: Promise<
   const handleExportPDF = async () => {
     try {
       const { exportDocumentToPDF } = await import("@/lib/utils/pdf-export");
-      exportDocumentToPDF(document, "Proforma Invoice");
+      await exportDocumentToPDF(document, "Proforma Invoice");
     } catch (error) {
       console.error("導出 PDF 失敗:", error);
       alert("導出失敗");

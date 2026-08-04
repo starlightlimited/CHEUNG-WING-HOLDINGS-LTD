@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -11,11 +11,11 @@ const prisma = new PrismaClient();
  *
  * 用法：
  *   npx tsx scripts/clear-quotations-contracts.ts
- *   npx tsx scripts/clear-quotations-contracts.ts DEMO
- *   npx tsx scripts/clear-quotations-contracts.ts DEMO --no-reset-seq
- *   npx tsx scripts/clear-quotations-contracts.ts DEMO --reset-seq   # 無單據時仍歸零單號序號
+ *   npx tsx scripts/clear-quotations-contracts.ts CW
+ *   npx tsx scripts/clear-quotations-contracts.ts CW --no-reset-seq
+ *   npx tsx scripts/clear-quotations-contracts.ts CW --reset-seq   # 無單據時仍歸零單號序號
  *
- * 環境變數（可選）：CLEAR_SALES_QC_COMPANY_CODE=DEMO
+ * 環境變數（可選）：CLEAR_SALES_QC_COMPANY_CODE=CW
  */
 async function resolveCompanyId(): Promise<string | null> {
   const fromEnv = process.env.CLEAR_SALES_QC_COMPANY_CODE?.trim();

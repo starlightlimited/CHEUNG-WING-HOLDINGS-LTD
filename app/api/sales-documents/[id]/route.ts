@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth/server";
+import { syncContractAndLinkedPrepaymentsToRevenue } from "@/lib/finance/sync-business-journals";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -73,6 +75,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         items: true,
       },
     });
+
+    if (
+      document.type === "CONTRACT" &&
+      (document.status === "CONFIRMED" || document.status === "COMPLETED")
+    ) {
+      await syncContractAndLinkedPrepaymentsToRevenue(prisma, companyId, document.id);
+      revalidatePath("/accounting/journals");
+      revalidatePath("/accounting/ledger");
+      revalidatePath("/accounting/reports/pl");
+      revalidatePath("/accounting/ar");
+    }
 
     return NextResponse.json(document);
   } catch (error: any) {

@@ -24,7 +24,13 @@ export default function QuotesPage() {
       const res = await fetch(`/api/sales-documents?type=QUOTATION`);
       if (res.ok) {
         const data = await res.json();
-        setDocuments(data);
+        setDocuments(
+          [...data].sort(
+            (a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime() ||
+              String(b.documentNo).localeCompare(String(a.documentNo)),
+          ),
+        );
       }
     } catch (error) {
       console.error("獲取報價單失敗:", error);
@@ -63,7 +69,7 @@ export default function QuotesPage() {
       if (res.ok) {
         const data = await res.json();
         const { exportDocumentToPDF } = await import("@/lib/utils/pdf-export");
-        exportDocumentToPDF(data, "Quotation");
+        await exportDocumentToPDF(data, "Quotation");
       }
     } catch (error) {
       console.error("導出 PDF 失敗:", error);
@@ -151,7 +157,8 @@ export default function QuotesPage() {
                   <TableCell>{getStatusBadge(doc.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      {doc.status !== "CONFIRMED" && (
+                      {!doc.children?.some((c: { type: string }) => c.type === "CONTRACT") &&
+                        doc.status !== "CONFIRMED" && (
                         <Button
                           variant="outline"
                           size="sm"

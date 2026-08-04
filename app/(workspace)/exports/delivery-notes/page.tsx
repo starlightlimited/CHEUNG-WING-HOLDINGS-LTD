@@ -36,7 +36,7 @@ function mapDocStatusToDelivery(status: string): DeliveryNoteExportRow["delivery
 export default async function DeliveryNotesExportPage() {
   const companyId = await getDefaultCompanyId();
   const rangeStart = new Date("2026-03-01T00:00:00+08:00");
-  const rangeEnd = new Date("2026-06-30T23:59:59.999+08:00");
+  const rangeEnd = new Date("2026-08-04T23:59:59.999+08:00");
 
   const rows = await prisma.salesDocument.findMany({
     where: {

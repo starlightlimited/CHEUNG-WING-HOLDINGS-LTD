@@ -18,8 +18,12 @@ export async function GET(request: Request) {
         _count: {
           select: { items: true },
         },
+        children: {
+          where: { status: { not: "CANCELLED" } },
+          select: { id: true, type: true, documentNo: true, status: true },
+        },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ date: "desc" }, { documentNo: "desc" }, { createdAt: "desc" }],
     });
 
     return NextResponse.json(documents);

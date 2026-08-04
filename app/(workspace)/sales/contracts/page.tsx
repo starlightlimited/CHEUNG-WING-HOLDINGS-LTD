@@ -24,7 +24,13 @@ export default function ContractsPage() {
       const res = await fetch(`/api/sales-documents?type=CONTRACT`);
       if (res.ok) {
         const data = await res.json();
-        setDocuments(data);
+        setDocuments(
+          [...data].sort(
+            (a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime() ||
+              String(b.documentNo).localeCompare(String(a.documentNo)),
+          ),
+        );
       }
     } catch (error) {
       console.error("獲取合同失敗:", error);
@@ -63,7 +69,7 @@ export default function ContractsPage() {
       if (res.ok) {
         const data = await res.json();
         const { exportDocumentToPDF } = await import("@/lib/utils/pdf-export");
-        exportDocumentToPDF(data, "Contract");
+        await exportDocumentToPDF(data, "Contract");
       }
     } catch (error) {
       console.error("導出 PDF 失敗:", error);

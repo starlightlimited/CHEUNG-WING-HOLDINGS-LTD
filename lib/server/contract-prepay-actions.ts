@@ -5,6 +5,19 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { canAccessCompanyTenantData, requireCompanyId } from "@/lib/company";
 import { getSession } from "@/lib/auth/session";
+import {
+  recognizePrepaymentAsRevenue,
+  syncContractAndLinkedPrepaymentsToRevenue,
+  syncPrepaymentToJournal,
+} from "@/lib/finance/sync-business-journals";
+
+function revalidateRevenuePaths() {
+  revalidatePath("/accounting/journals");
+  revalidatePath("/accounting/ledger");
+  revalidatePath("/accounting/reports/pl");
+  revalidatePath("/accounting/reports/bs");
+  revalidatePath("/accounting/reports/trial-balance");
+}
 
 async function requireContractPrepayCompanyId(): Promise<string> {
   const session = await getSession();
@@ -134,6 +147,12 @@ export async function linkOpenPrepaymentToContract(
         customerId: prepayment.customerId ?? contract.customerId,
       },
     });
+
+    if (contract.status === "CONFIRMED" || contract.status === "COMPLETED") {
+      await recognizePrepaymentAsRevenue(prisma, companyId, prepaymentId);
+      await syncContractAndLinkedPrepaymentsToRevenue(prisma, companyId, contract.id);
+      revalidateRevenuePaths();
+    }
 
     revalidatePath("/financial/contract-invoice-prepay");
     revalidatePath("/financial/prepayments");
@@ -295,7 +314,7 @@ export async function receiveContractRemainingAsPrepayment(
 
     const amount = new Prisma.Decimal(amountNum.toFixed(2));
 
-    await prisma.prepayment.create({
+    const created = await prisma.prepayment.create({
       data: {
         companyId,
         amount,
@@ -309,6 +328,14 @@ export async function receiveContractRemainingAsPrepayment(
       },
     });
 
+    if (contract.status === "CONFIRMED" || contract.status === "COMPLETED") {
+      await recognizePrepaymentAsRevenue(prisma, companyId, created.id);
+      await syncContractAndLinkedPrepaymentsToRevenue(prisma, companyId, contract.id);
+    } else {
+      await syncPrepaymentToJournal(prisma, companyId, created.id);
+    }
+
+    revalidateRevenuePaths();
     revalidatePath("/accounting/ar");
     revalidatePath("/financial/prepayments");
     revalidatePath("/financial/contract-invoice-prepay");

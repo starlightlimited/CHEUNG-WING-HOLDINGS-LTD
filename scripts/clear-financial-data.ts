@@ -1,4 +1,4 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -9,9 +9,9 @@ const prisma = new PrismaClient();
  *
  * 用法：
  *   npx tsx scripts/clear-financial-data.ts              # 預設：最早建立的 Company
- *   npx tsx scripts/clear-financial-data.ts DEMO         # 指定公司 code
+ *   npx tsx scripts/clear-financial-data.ts CW         # 指定公司 code
  *
- * 環境變數（可選）：CLEAR_FINANCIAL_COMPANY_CODE=DEMO
+ * 環境變數（可選）：CLEAR_FINANCIAL_COMPANY_CODE=CW
  */
 async function resolveCompanyId(): Promise<string | null> {
   const fromEnv = process.env.CLEAR_FINANCIAL_COMPANY_CODE?.trim();

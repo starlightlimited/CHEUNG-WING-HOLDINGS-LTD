@@ -58,7 +58,13 @@ export function PurchaseOrdersClient({ companyId }: { companyId: string }) {
 
       if (ordersRes.ok) {
         const data = await ordersRes.json();
-        setOrders(data);
+        setOrders(
+          [...data].sort(
+            (a: { date: string; poNumber: string }, b: { date: string; poNumber: string }) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime() ||
+              String(b.poNumber).localeCompare(String(a.poNumber)),
+          ),
+        );
       }
 
       if (productsRes.ok) {

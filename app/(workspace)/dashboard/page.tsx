@@ -6,6 +6,7 @@ import { loadUnifiedAccountsReceivable } from "@/lib/finance/unified-accounts-re
 import { loadUnifiedAccountsPayable } from "@/lib/finance/unified-accounts-payable";
 import { Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth/session";
+import { displayUserName } from "@/lib/user-display-name";
 import {
   FileText,
   Banknote,
@@ -33,7 +34,7 @@ function money(d: Prisma.Decimal | number) {
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const userName = session?.name || "財務專員";
+  const userName = displayUserName(session?.name) || "User";
 
   const companyId = await getDefaultCompanyId();
   const now = new Date();

@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+﻿import type { PrismaClient } from "@prisma/client";
 import type { DocumentCaseStatus } from "@prisma/client";
 
 function hkDate(y: number, m: number, d: number, h = 12, min = 0) {
@@ -101,7 +101,7 @@ export async function seedDocumentCases(prisma: PrismaClient, companyId: string)
     data: {
       companyId,
       name: "對賬與關帳",
-      description: "預收與應收差異、演示客戶對賬釐清。",
+      description: "預收與應收差異、客戶對賬釐清。",
       parentId: catFin.id,
       sortOrder: 32,
     },
@@ -203,9 +203,9 @@ export async function seedDocumentCases(prisma: PrismaClient, companyId: string)
     },
     {
       code: "CASE-2026-0527-PRB",
-      title: "演示客戶 B—預收 INV-DEMO-001 與進度款對賬差異釐清",
+      title: "駿業貿易—預收 INV-CW-001 與進度款對賬差異釐清",
       description:
-        "對齊種子預收資料與 BS 演示：財務核對銀行水單與合同里程碑；待客戶蓋回採購章後轉應收。",
+        "對齊種子預收資料與資產負債表：財務核對銀行水單與合同里程碑；待客戶蓋回採購章後轉應收。",
       categoryId: catRecon.id,
       status: "IN_PROGRESS",
       openedAt: hkDate(2026, 4, 15),
@@ -215,7 +215,7 @@ export async function seedDocumentCases(prisma: PrismaClient, companyId: string)
     },
     {
       code: "CASE-2026-0506-MTR",
-      title: "港鐵物料類請款—附件齊套性與審批軌跡檢查（演示）",
+      title: "港鐵物料類請款—附件齊套性與審批軌跡檢查",
       description:
         "對齊請款／公共庫敘述：發票副本、驗收單、合同頁次與審批權限設置一致；已標記可支付。",
       categoryId: catPr.id,
@@ -275,7 +275,7 @@ export async function seedDocumentCases(prisma: PrismaClient, companyId: string)
     },
     {
       code: "CASE-2026-0620-B2B",
-      title: "B2B 報價單導出欄位—與二十家演示客戶公司模板對齊",
+      title: "B2B 報價單導出欄位—與二十家客戶公司模板對齊",
       description:
         "對齊客戶種子「風格接近真實商業檔案」：抬頭、聯絡人、稅號欄位與 QT 前綴單號規則批量驗證。",
       categoryId: catPdf.id,

@@ -45,24 +45,30 @@ function deliveryStatusBadgeClass(status: string) {
 export function DeliveryNotesExportClient({ initialRows }: { initialRows: DeliveryNoteExportRow[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("2026-03-01");
-  const [dateTo, setDateTo] = useState("2026-06-30");
+  const [dateTo, setDateTo] = useState("2026-08-04");
   const [isExporting, setIsExporting] = useState(false);
 
   const filtered = useMemo(() => {
     const from = dateFrom ? dateFrom : "0000-01-01";
     const to = dateTo ? dateTo : "9999-12-31";
     const q = searchTerm.trim().toLowerCase();
-    return initialRows.filter((row) => {
-      const inRange = row.deliveryDate >= from && row.deliveryDate <= to;
-      if (!inRange) return false;
-      if (!q) return true;
-      return (
-        row.customerName.toLowerCase().includes(q) ||
-        row.deliveryNoteNo.toLowerCase().includes(q) ||
-        row.relatedOrderNo.toLowerCase().includes(q) ||
-        row.address.toLowerCase().includes(q)
+    return initialRows
+      .filter((row) => {
+        const inRange = row.deliveryDate >= from && row.deliveryDate <= to;
+        if (!inRange) return false;
+        if (!q) return true;
+        return (
+          row.customerName.toLowerCase().includes(q) ||
+          row.deliveryNoteNo.toLowerCase().includes(q) ||
+          row.relatedOrderNo.toLowerCase().includes(q) ||
+          row.address.toLowerCase().includes(q)
+        );
+      })
+      .sort(
+        (a, b) =>
+          b.deliveryDate.localeCompare(a.deliveryDate) ||
+          b.deliveryNoteNo.localeCompare(a.deliveryNoteNo),
       );
-    });
   }, [initialRows, searchTerm, dateFrom, dateTo]);
 
   const handleExport = () => {
@@ -81,7 +87,7 @@ export function DeliveryNotesExportClient({ initialRows }: { initialRows: Delive
         <div>
           <h1 className="text-2xl font-bold tracking-tight">送貨單導出</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            列表由預收發票主檔與客戶送貨地址衍生（單號規則：PI-… → DN-…／SO-…）；預設 2026 年 3–6
+            列表由預收發票主檔與客戶送貨地址衍生（單號規則：PI-… → DN-…／SO-…）；預設 2026 年 3–8
             月與種子數據一致。
           </p>
         </div>
@@ -165,7 +171,7 @@ export function DeliveryNotesExportClient({ initialRows }: { initialRows: Delive
                   <TableRow>
                     <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                       {initialRows.length === 0
-                        ? "暫無送貨單來源單據；請執行 npx prisma db seed 載入演示數據。"
+                        ? "暫無送貨單來源單據；請執行 npx prisma db seed 載入種子資料。"
                         : "沒有符合篩選條件的送貨單記錄"}
                     </TableCell>
                   </TableRow>

@@ -7,7 +7,7 @@ import type { DocumentCaseStatus } from "@prisma/client";
 
 const PATH = "/files/case-management";
 
-/** 避免舊 Prisma 單例或未完成 generate 時對 undefined 呼叫 .count / .findMany */
+/** 避免與 Prisma 單例或未完成 generate 時對 undefined 呼叫 .count / .findMany */
 function documentCaseModelsAvailable(): boolean {
   const p = prisma as unknown as {
     documentCaseCategory?: { count?: unknown; findMany?: unknown };
@@ -22,10 +22,10 @@ function documentCaseModelsAvailable(): boolean {
 }
 
 const DOCUMENT_CASE_PRISMA_MSG =
-  "Prisma 尚未載入「案件」資料表（常見：未執行 generate，或 dev 仍使用舊快取）。請依序：① npx prisma generate  ② 完全關閉並重啟 npm run dev（必要時刪除 .next） ③ npx prisma db push。Windows 若 generate 出現 EPERM，請先關閉 dev 再執行 generate。";
+  "Prisma 尚未載入「案件」資料表（常見：未執行 generate，或 dev 仍使用舊快取）。請依序：① npx prisma generate  ②完全關閉並重啟 npm run dev（必要時刪除 .next）③ npx prisma db push。Windows 若 generate 出現 EPERM，請先關閉 dev 再執行 generate。";
 
-/** 當前公司尚無任何案件分類與案件時，自動寫入與主 seed 一致的演示資料（避免僅跑部分腳本時頁面空白）。 */
-async function ensureDocumentCaseDemoDataIfUnset(companyId: string): Promise<void> {
+/** 當前公司尚無任何案件分類與案件時，自動寫入與主 seed 一致的種子資料（避免僅跑部分腳本時頁面空白）。 */
+async function ensureDocumentCaseSeedDataIfUnset(companyId: string): Promise<void> {
   if (!documentCaseModelsAvailable()) return;
   const [catCount, caseCount] = await Promise.all([
     prisma.documentCaseCategory.count({ where: { companyId } }),
@@ -59,12 +59,27 @@ async function categoryIsUnder(
 
 /** 案件管理頁首屏：必要時種子後一次返回分類與案件，避免雙請求競態。 */
 export async function getDocumentCaseManagementPageData() {
+  // #region agent log
+  fetch("http://127.0.0.1:7400/ingest/d1cd1f78-10d6-4ca1-8b6b-cd229733bede", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "50577c" },
+    body: JSON.stringify({
+      sessionId: "50577c",
+      runId: "post-fix",
+      hypothesisId: "H1",
+      location: "document-cases.ts:getDocumentCaseManagementPageData",
+      message: "action module parsed and invoked",
+      data: { utf8SourceOk: true, hasSeedHelper: typeof ensureDocumentCaseSeedDataIfUnset === "function" },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   try {
     if (!documentCaseModelsAvailable()) {
       return { success: false, message: DOCUMENT_CASE_PRISMA_MSG };
     }
     const companyId = await getDefaultCompanyId();
-    await ensureDocumentCaseDemoDataIfUnset(companyId);
+    await ensureDocumentCaseSeedDataIfUnset(companyId);
     const [categories, cases] = await Promise.all([
       prisma.documentCaseCategory.findMany({
         where: { companyId },
@@ -94,7 +109,7 @@ export async function getDocumentCaseCategories() {
       return { success: false, message: DOCUMENT_CASE_PRISMA_MSG };
     }
     const companyId = await getDefaultCompanyId();
-    await ensureDocumentCaseDemoDataIfUnset(companyId);
+    await ensureDocumentCaseSeedDataIfUnset(companyId);
     const rows = await prisma.documentCaseCategory.findMany({
       where: { companyId },
       include: {
@@ -210,7 +225,7 @@ export async function getDocumentCases() {
       return { success: false, message: DOCUMENT_CASE_PRISMA_MSG };
     }
     const companyId = await getDefaultCompanyId();
-    await ensureDocumentCaseDemoDataIfUnset(companyId);
+    await ensureDocumentCaseSeedDataIfUnset(companyId);
     const rows = await prisma.documentCase.findMany({
       where: { companyId },
       include: {

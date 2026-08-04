@@ -61,7 +61,7 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
   const handleExportPDF = async () => {
     try {
       const { exportDocumentToPDF } = await import("@/lib/utils/pdf-export");
-      exportDocumentToPDF(document, "Contract");
+      await exportDocumentToPDF(document, "Contract");
     } catch (error) {
       console.error("導出 PDF 失敗:", error);
       alert("導出失敗");

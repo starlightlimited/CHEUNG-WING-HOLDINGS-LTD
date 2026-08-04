@@ -1,15 +1,25 @@
 import { prisma } from "./prisma";
+import { DEFAULT_COMPANY_CODE, LEGACY_COMPANY_CODES } from "./company-constants";
 
 /**
- * 全系統固定使用 code=DEMO 的公司（與種子演示一致）。
- * 若庫中尚無 DEMO 且僅有一家公司，則退回該家以便全新庫可啟動。
+ * 全系統固定使用預設公司（種子主檔）。
+ * 若庫中尚無預設代碼且僅有一家公司，則退回該家以便全新庫可啟動。
+ * 仍相容舊代碼 DEMO，種子執行後會遷為 CW。
  */
 export async function getDefaultCompanyId(): Promise<string> {
-  const demo = await prisma.company.findFirst({
-    where: { code: "DEMO" },
+  const preferred = await prisma.company.findFirst({
+    where: { code: DEFAULT_COMPANY_CODE },
     select: { id: true },
   });
-  if (demo) return demo.id;
+  if (preferred) return preferred.id;
+
+  for (const code of LEGACY_COMPANY_CODES) {
+    const legacy = await prisma.company.findFirst({
+      where: { code },
+      select: { id: true },
+    });
+    if (legacy) return legacy.id;
+  }
 
   const total = await prisma.company.count();
   if (total === 0) {
@@ -27,7 +37,7 @@ export async function getDefaultCompanyId(): Promise<string> {
   }
 
   throw new Error(
-    "系統已固定使用代碼為 DEMO 的公司；資料庫中未找到該公司且存在多家公司。請執行 npx prisma db seed，或將演示主檔公司代碼設為 DEMO。"
+    `系統已固定使用代碼為 ${DEFAULT_COMPANY_CODE} 的公司；資料庫中未找到該公司且存在多家公司。請執行 npx prisma db seed，或將主檔公司代碼設為 ${DEFAULT_COMPANY_CODE}。`,
   );
 }
 
@@ -40,7 +50,7 @@ export async function requireCompanyId(): Promise<string> {
 export async function canAccessCompanyTenantData(
   userId: string,
   companyId: string,
-  isSuperAdmin: boolean
+  isSuperAdmin: boolean,
 ): Promise<boolean> {
   if (isSuperAdmin) return true;
   const link = await prisma.userRole.findFirst({

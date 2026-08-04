@@ -46,7 +46,7 @@ export function TreasuryReceivableHubNav({
           href={customerId ? `/accounting/ar${q}` : "/accounting/ar"}
           className={itemClass(active === "ar")}
         >
-          應收帳款管理
+          應收臺帳
         </Link>
         {customerId ? (
           <Link

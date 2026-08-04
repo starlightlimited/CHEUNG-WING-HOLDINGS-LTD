@@ -20,7 +20,7 @@ export default async function NewJournalPage() {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">新建憑證</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          至少兩行分錄；每行僅填借方或貸方；借貸合計必須相等。
+          至少兩行分錄；每行僅填借方或貸方；借貸合計必須相等。儲存後即視為正式帳並過帳至總帳明細。
         </p>
       </div>
 

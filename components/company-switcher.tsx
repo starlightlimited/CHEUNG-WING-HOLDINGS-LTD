@@ -22,7 +22,7 @@ export function CompanySwitcher({
 }: {
   companies: { id: string; name: string; code: string }[];
   currentCompanyId: string | null;
-  /** @deprecated 已固定 DEMO 公司，不再提供切換；保留參數以免呼叫端破壞型變更 */
+  /** @deprecated 已固定預設公司，不再提供切換；保留參數以免呼叫端破壞型變更 */
   showSwitcher?: boolean;
   canManageCompanies: boolean;
   userLabel: string;

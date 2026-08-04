@@ -7,6 +7,8 @@ export type SessionUser = {
   email: string;
   name?: string | null;
   permissions?: string[];
+  /** 公司內角色名稱（如 Admin、Staff）；舊 token 可能沒有 */
+  roles?: string[];
   /** JWT 內可選；未帶則視為 false */
   isSuperAdmin?: boolean;
 };
@@ -21,6 +23,9 @@ export async function getSession(): Promise<SessionUser | null> {
       email: String(payload.email ?? ""),
       name: payload.name != null ? String(payload.name) : null,
       permissions: Array.isArray(payload.permissions) ? payload.permissions : [],
+      roles: Array.isArray(payload.roles)
+        ? payload.roles.map((r) => String(r)).filter(Boolean)
+        : [],
       isSuperAdmin: payload.isSuperAdmin === true,
     };
   } catch {

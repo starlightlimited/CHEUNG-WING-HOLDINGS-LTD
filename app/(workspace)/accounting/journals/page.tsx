@@ -27,7 +27,7 @@ export default async function JournalsPage() {
           <h2 className="text-2xl font-semibold tracking-tight">會計憑證</h2>
           <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
             列表僅顯示<strong className="font-medium text-zinc-800 dark:text-zinc-200">實際入帳</strong>
-            ：手動建立之草稿／已過帳憑證，以及請款單標記「已支付」時自動產生之已過帳憑證。不寫入固定演示分錄。
+            ：手動建立之草稿／已過帳憑證，以及請款單標記「已支付」時自動產生之已過帳憑證。
           </p>
         </div>
         <Link
@@ -49,11 +49,11 @@ export default async function JournalsPage() {
                 手動入帳；請款單改為「已支付」後也會自動產生憑證。
               </li>
               <li>
-                若曾刪除演示資料，請在專案目錄執行{" "}
+                若需重新初始化種子資料，請在專案目錄執行{" "}
                 <code className="rounded bg-zinc-200 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-800">
                   npm run db:seed
-                </code>{" "}
-                還原完整演示庫（含 DEMO 用戶與客戶等）。
+                </code>
+                。
               </li>
             </ul>
           </div>

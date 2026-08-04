@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getDefaultCompanyId } from "@/lib/company";
 import { getCustomerAnalytics } from "@/lib/server/sales-customer-analytics";
 
+export const dynamic = "force-dynamic";
+
 export default async function CustomerAnalysisPage() {
   const companyId = await getDefaultCompanyId();
   const { customerSources, conversionRates, totalCustomers } =
